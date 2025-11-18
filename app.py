@@ -36,7 +36,13 @@ df_kmeans[num_cols] = scaler.fit_transform(df_kmeans[num_cols])
 # ------------------------------------------------------------
 # UI
 # ------------------------------------------------------------
-app_ui = ui.page_navbar(
+app_ui = ui.page_fluid(
+        ui.tags.style("""
+            th { text-align: left !important; }
+        """),
+
+    ui.page_navbar(
+    # ---- Project Overview Tab ----
     ui.nav_panel(
         "Project Overview",
         ui.h2("Coffee Bean Quality Machine Learning Analysis"),
@@ -54,6 +60,7 @@ app_ui = ui.page_navbar(
     # ---- EDA Tab ----
     ui.nav_panel(
         "EDA",
+        ui.h3("EDA"),
         ui.layout_sidebar(
             ui.sidebar(
                 ui.input_select(
@@ -70,6 +77,7 @@ app_ui = ui.page_navbar(
     # ---- K-Means Clustering Tab ----
     ui.nav_panel(
         "K-Means Clustering",
+        ui.h3("K-Means Clustering"),
         ui.layout_sidebar(
             ui.sidebar(
                 ui.input_radio_buttons(
@@ -86,14 +94,18 @@ app_ui = ui.page_navbar(
                     value=3
                 )
             ),
+            ui.h5("Clustering Plot"),
             ui.output_plot("cluster_plot"),
-            ui.h3("Cluster Centroids"),
-            ui.output_table("centroid_table")
+            ui.h5("Cluster Centroids"),
+            ui.output_table("centroid_table"),
+            ui.h5("Variable Importance in Clustering"),
+            ui.output_table("importance_table")
+
         )
     ),
 
     title="DS 6021 Final Project"
-)
+))
 
 # ------------------------------------------------------------
 # Server
@@ -116,10 +128,7 @@ def server(input, output, session):
     @reactive.Calc
     def kmeans_result():
         k = input.k_clusters()
-        data = filtered_df()
-
-        scaler = StandardScaler()
-        scaled = scaler.fit_transform(data)
+        scaled = filtered_df()
 
         kmeans = KMeans(n_clusters=k, random_state=42)
         labels = kmeans.fit_predict(scaled)
@@ -127,20 +136,27 @@ def server(input, output, session):
         pca = PCA(n_components=2)
         components = pca.fit_transform(scaled)
 
-        df_clusters = data.copy()
+        df_clusters = scaled.copy()
         df_clusters["cluster"] = labels
         df_clusters["PC1"] = components[:, 0]
         df_clusters["PC2"] = components[:, 1]
 
         centroids_original = scaler.inverse_transform(kmeans.cluster_centers_)
         centroids_df = pd.DataFrame(
-            centroids_original, columns=data.columns
+            centroids_original, columns=scaled.columns
         )
         centroids_df["Cluster"] = range(k)
         cols = ["Cluster"] + [c for c in centroids_df.columns if c != "Cluster"]
         centroids_df = centroids_df[cols]
 
-        return df_clusters, centroids_df
+        centroids_scaled = kmeans.cluster_centers_
+        centroids_df_scaled = pd.DataFrame(centroids_scaled, columns=scaled.columns)
+
+        feature_importance = (centroids_df_scaled.max() - centroids_df_scaled.min()).sort_values(ascending=False)
+        feature_importance = feature_importance.reset_index()
+        feature_importance.columns = ["Variable", "Importance"]
+
+        return df_clusters, centroids_df, feature_importance
 
 
     # Display the full dataframe
@@ -173,9 +189,9 @@ def server(input, output, session):
     @output
     @render.plot
     def cluster_plot():
-        df_clusters, _ = kmeans_result()
+        df_clusters, _, _ = kmeans_result()
 
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=(8,4))
         k = input.k_clusters()
 
         for c in range(k):
@@ -197,8 +213,16 @@ def server(input, output, session):
     @output
     @render.table
     def centroid_table():
-        _, centroids = kmeans_result()
+        _, centroids, _ = kmeans_result()
         return centroids
+    
+    # ----- Cluster Var Importance Table -----
+    @output
+    @render.table
+    def importance_table():
+        _, _, importance = kmeans_result()
+        return importance
+
 
 # ------------------------------------------------------------
 # App
