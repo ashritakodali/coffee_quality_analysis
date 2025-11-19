@@ -44,7 +44,7 @@ app_ui = ui.page_fluid(
     ui.page_navbar(
     # ---- Project Overview Tab ----
     ui.nav_panel(
-        "Project Overview",
+        "Overview",
         ui.h2("Coffee Bean Quality Machine Learning Analysis"),
         ui.p("DS 6021 Final Project"),
         ui.p("Marissa Burton, Hayeon Chung, Maggie Crowner, Asmita Kadam, Ashrita Kodali")
@@ -60,7 +60,7 @@ app_ui = ui.page_fluid(
     # ---- EDA Tab ----
     ui.nav_panel(
         "EDA",
-        ui.h3("EDA"),
+        ui.h3("Exploratory Data Analysis"),
         ui.layout_sidebar(
             ui.sidebar(
                 ui.input_select(
@@ -76,8 +76,8 @@ app_ui = ui.page_fluid(
 
     # ---- K-Means Clustering Tab ----
     ui.nav_panel(
-        "K-Means Clustering",
-        ui.h3("K-Means Clustering"),
+        "K-Means",
+        ui.h3("What distinct profiles of arabica/robusta coffee beans can we identify?"),
         ui.layout_sidebar(
             ui.sidebar(
                 ui.input_radio_buttons(
@@ -104,7 +104,35 @@ app_ui = ui.page_fluid(
         )
     ),
 
-    title="DS 6021 Final Project"
+    # ---- Linear Regression -----
+    ui.nav_panel(
+        "Linear Reg",
+        ui.h3("Linear Regression"),
+        ui.p("placeholder")
+    ),
+
+    # ---- Logistic Regression -----
+    ui.nav_panel(
+        "Logistic Reg",
+        ui.h3("How well can we classify coffee beans as arabica or robusta based on their characteristics?"),
+        ui.p("placeholder")
+    ),
+
+    # ---- KNN -----
+    ui.nav_panel(
+        "KNN",
+        ui.h3("K-Nearest Neighbors"),
+        ui.p("placeholder")
+    ),
+
+    # ---- MLP -----
+    ui.nav_panel(
+        "MLP",
+        ui.h3("MLP"),
+        ui.p("placeholder")
+    ),
+
+    title="Coffee Quality Analysis"
 ))
 
 # ------------------------------------------------------------
