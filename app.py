@@ -159,13 +159,13 @@ def server(input, output, session):
         return df_clusters, centroids_df, feature_importance
 
 
-    # Display the full dataframe
+    # ----- Display the full dataframe -----
     @output
     @render.table
     def df_table():
         return df   
 
-    # EDA countplot
+    # ----- EDA countplot -----
     @output
     @render.plot
     def countplot():
