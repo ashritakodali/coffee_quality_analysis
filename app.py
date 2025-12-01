@@ -10,16 +10,6 @@ from sklearn.preprocessing import StandardScaler
 # Dataset
 df = pd.read_csv("cleaned_data/FINAL_DATA.csv")
 
-# Further cleaning for Maggie EDA (kmeans)
-df_mc = df.copy()
-df_mc['Defective'] = np.where(
-    (df_mc['Category.One.Defects'] > 0) | (df_mc['Category.Two.Defects'] > 0),
-    "Defective",
-    "Not defective"
-)
-df_mc['Country.of.Origin'] = df_mc['Country.of.Origin'].replace('Tanzania, United Republic Of', 'Tanzania')
-df_mc['Country.of.Origin'] = df_mc['Country.of.Origin'].replace('Papua New Guinea', 'PN Guinea')
-
 # Further cleaning for K-Means
 df_kmeans = df.copy()
 df_kmeans['Taste'] = df_kmeans[['Flavor', 'Aftertaste', 'Acidity', 'Body', 'Balance']].mean(axis=1)
@@ -55,23 +45,6 @@ app_ui = ui.page_fluid(
         "Dataset",
         ui.h3("Data Preview"),
         ui.output_table("df_table")
-    ),
-
-    # ---- EDA Tab ----
-    ui.nav_panel(
-        "EDA",
-        ui.h3("Exploratory Data Analysis"),
-        ui.layout_sidebar(
-            ui.sidebar(
-                ui.input_select(
-                    "xvar",
-                    "Select X-axis Variable:",
-                    choices=["Color", "Processing.Method", "Country.of.Origin"],
-                    selected="Color"
-                )
-            ),
-            ui.output_plot("countplot")
-        )
     ),
 
     # ---- K-Means Clustering Tab ----
@@ -139,11 +112,6 @@ app_ui = ui.page_fluid(
 # Server
 # ------------------------------------------------------------
 def server(input, output, session):
-
-    # EDA reactive data - by defective status
-    @reactive.Calc
-    def selected_var():
-        return input.xvar()
     
     # K-means clustering reactive data
     @reactive.Calc
@@ -193,26 +161,6 @@ def server(input, output, session):
     def df_table():
         return df   
 
-    # ----- EDA countplot -----
-    @output
-    @render.plot
-    def countplot():
-        plt.figure(figsize=(8,4))
-        sns.countplot(
-            x=selected_var(),
-            hue="Defective",
-            data=df_mc,
-            palette=["#6F4E37", "#C04040"]
-        )
-        plt.title(f"Distribution of {selected_var()} by Defective Status")
-        plt.xlabel(selected_var())
-        plt.ylabel("Count")
-        if selected_var() == "Country.of.Origin":
-            plt.xticks(rotation=90, fontsize=8)
-        plt.legend(title="Defective")
-        plt.tight_layout()
-        return plt.gcf()
-    
     # ----- PCA Cluster Plot -----
     @output
     @render.plot
