@@ -6,6 +6,14 @@ import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, FunctionTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.decomposition import PCA
+from scipy import stats
 
 # Dataset
 df = pd.read_csv("cleaned_data/FINAL_DATA.csv")
@@ -21,6 +29,11 @@ df_kmeans = df_kmeans[['Species', 'Taste', 'Aroma', 'Quality Control', 'Sweetnes
 num_cols = df_kmeans.select_dtypes(include='number').columns
 scaler = StandardScaler()
 df_kmeans[num_cols] = scaler.fit_transform(df_kmeans[num_cols])
+
+# Further cleaning for KNN
+df_knn = df.copy()
+df_knn['Altitude'] = pd.to_numeric(df_knn['Altitude'], errors='coerce')
+df_knn = df_knn.dropna(subset=['Altitude'])
 
 
 # ------------------------------------------------------------
@@ -50,7 +63,7 @@ app_ui = ui.page_fluid(
     # ---- K-Means Clustering Tab ----
     ui.nav_panel(
         "K-Means",
-        ui.h3("What distinct profiles of arabica/robusta coffee beans can we identify?"),
+        ui.h3("What distinct profiles of arabica/robusta coffee beans can we identify using K-Means Clustering?"),
         ui.layout_sidebar(
             ui.sidebar(
                 ui.input_radio_buttons(
@@ -94,8 +107,35 @@ app_ui = ui.page_fluid(
     # ---- KNN -----
     ui.nav_panel(
         "KNN",
-        ui.h3("K-Nearest Neighbors"),
-        ui.p("placeholder")
+        ui.h3("How well can we predict the altitude of the coffee bean farms using K-Nearest Neighbors Regression?"),
+        ui.layout_sidebar(
+            ui.sidebar(
+                ui.input_slider("knn_neighbors", 
+                    "Number of Neighbors (k):", 
+                    min=1, max=20, value=5
+                ),
+                ui.input_select("knn_weights", 
+                    "Weights:", 
+                    choices=['uniform', 'distance']
+                ),
+                ui.input_select("knn_model", 
+                    "Model Type:", 
+                    choices=['KNN', 'KNN with PCA']
+                )
+            ),
+
+            ui.div(
+                ui.h5("Model Evaluation"),
+                ui.output_table("eval_table")
+            ),
+
+            ui.h5("Model Diagnostic Plots"),
+
+            ui.output_plot("plot_actual_vs_predicted", height="400px"),
+            ui.output_plot("plot_residuals_vs_predicted", height="400px"),
+            ui.output_plot("plot_hist_residuals", height="400px"),
+            ui.output_plot("plot_qq_residuals", height="400px")
+        )
     ),
 
     # ---- MLP -----
@@ -198,6 +238,139 @@ def server(input, output, session):
     def importance_table():
         _, _, importance = kmeans_result()
         return importance
+    
+    # ----- KNN Evaluation Table -----
+    @reactive.Calc
+    def knn_eval():
+        X = df_knn.drop(columns=['Altitude'])
+        y = df_knn['Altitude']
+        Xy = pd.concat([X, y], axis=1).dropna()
+        X = Xy.drop(columns=['Altitude'])
+        y = Xy['Altitude']
+
+        #train/test
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        numeric_features = X.select_dtypes(include=[np.number]).columns.tolist()
+        categorical_features = X.select_dtypes(exclude=[np.number]).columns.tolist()
+        numeric_transformer = Pipeline([("scaler", StandardScaler())])
+        categorical_transformer = Pipeline([("onehot", OneHotEncoder(handle_unknown="ignore"))])
+        preprocessor = ColumnTransformer([
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features)
+        ])
+        model_type = input.knn_model()
+        n_neighbors = input.knn_neighbors()
+        weights = input.knn_weights()
+        if model_type == "KNN":
+            pipe = Pipeline([("preprocess", preprocessor), ("knn", KNeighborsRegressor(n_neighbors=n_neighbors, weights=weights))])
+        else:
+            to_dense = FunctionTransformer(lambda x: x.toarray(), accept_sparse=True)
+            pipe = Pipeline([
+                ("preprocess", preprocessor),
+                ("to_dense", to_dense),
+                ("pca", PCA(n_components=20, random_state=42)),
+                ("knn", KNeighborsRegressor(n_neighbors=n_neighbors, weights=weights))
+            ])
+        pipe.fit(X_train, y_train)
+        y_pred = pipe.predict(X_test)
+        y_test_arr = np.array(y_test)
+        y_pred_arr = np.array(y_pred)
+        residuals = y_test_arr - y_pred_arr
+        mse = mean_squared_error(y_test_arr, y_pred_arr)
+        rmse = np.sqrt(mse)
+        r2 = r2_score(y_test_arr, y_pred_arr)
+        return {
+            "y_true": y_test_arr,
+            "y_pred": y_pred_arr,
+            "residuals": residuals,
+            "n_neighbors": n_neighbors,
+            "weights": weights,
+            "RMSE": round(rmse,3),
+            "R^2": round(r2,3)
+        }
+
+    # Render table
+    @output
+    @render.table
+    def eval_table():
+        res = knn_eval()
+        return pd.DataFrame({
+            "Metric": ["n_neighbors", "weights", "RMSE", "R²"],
+            "Value": [res["n_neighbors"],
+                      res["weights"],
+                      res["RMSE"],
+                      res["R^2"]]
+        })
+    
+    # KNN Plots
+    @output
+    @render.plot
+    def plot_actual_vs_predicted():
+        res = knn_eval()
+        y_true = res["y_true"]
+        y_pred = res["y_pred"]
+        plt.figure(figsize=(7,5))
+        plt.scatter(y_true, y_pred, alpha=0.6, color="#6F4E37")
+        min_val = min(y_true.min(), y_pred.min())
+        max_val = max(y_true.max(), y_pred.max())
+        plt.plot([min_val, max_val], [min_val, max_val], linestyle="--", color='red')
+        plt.xlabel("Actual Altitude")
+        plt.ylabel("Predicted Altitude")
+        plt.title("Actual vs Predicted Altitude (KNN)")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
+
+    @output
+    @render.plot
+    def plot_residuals_vs_predicted():
+        res = knn_eval()
+        y_pred = res["y_pred"]
+        residuals = res["residuals"]
+        plt.figure(figsize=(7,5))
+        plt.scatter(y_pred, residuals, alpha=0.6, color="#6F4E37")
+        plt.axhline(0, linestyle="--", color='red')
+        plt.xlabel("Predicted Altitude")
+        plt.ylabel("Residuals (Actual - Predicted)")
+        plt.title("Residuals vs Predicted Values")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
+
+    @output
+    @render.plot
+    def plot_hist_residuals():
+        res = knn_eval()
+        residuals = res["residuals"]
+        plt.figure(figsize=(7,5))
+        plt.hist(residuals, bins=30, edgecolor="black", color="#6F4E37")
+        plt.xlabel("Residual")
+        plt.ylabel("Frequency")
+        plt.title("Histogram of Residuals")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
+
+    @output
+    @render.plot
+    def plot_qq_residuals():
+        res = knn_eval()
+        residuals = res["residuals"]
+        plt.figure(figsize=(7,5))
+        (osm, osr), (slope, intercept, r) = stats.probplot(residuals, dist="norm")
+        plt.scatter(osm, osr, color="#6F4E37", alpha=0.6)
+        x = np.linspace(min(osm), max(osm), 100)
+        plt.plot(x, slope*x + intercept, linestyle="--", color="red")
+        plt.title("Q-Q Plot of Residuals")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
+
 
 
 # ------------------------------------------------------------
