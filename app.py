@@ -68,7 +68,7 @@ app_ui = ui.page_fluid(
             ui.sidebar(
                 ui.input_radio_buttons(
                     "species_filter",
-                    "Select Species:",
+                    "Species:",
                     choices=["Arabica", "Robusta"],
                     selected="Arabica"
                 ),
@@ -112,22 +112,27 @@ app_ui = ui.page_fluid(
             ui.sidebar(
                 ui.input_slider("knn_neighbors", 
                     "Number of Neighbors (k):", 
-                    min=1, max=20, value=5
+                    min=1, max=20, value=4
                 ),
                 ui.input_select("knn_weights", 
                     "Weights:", 
-                    choices=['uniform', 'distance']
+                    choices=['uniform', 'distance'],
+                    selected='distance'
                 ),
                 ui.input_select("knn_model", 
                     "Model Type:", 
                     choices=['KNN', 'KNN with PCA']
-                )
+                ),
+                ui.output_ui("pca_slider_ui")
             ),
 
             ui.div(
                 ui.h5("Model Evaluation"),
                 ui.output_table("eval_table")
             ),
+
+            ui.h5("KNN Plot"),
+            ui.output_plot("knn_2d_plot", height="400px"),
 
             ui.h5("Model Diagnostic Plots"),
 
@@ -265,11 +270,12 @@ def server(input, output, session):
         if model_type == "KNN":
             pipe = Pipeline([("preprocess", preprocessor), ("knn", KNeighborsRegressor(n_neighbors=n_neighbors, weights=weights))])
         else:
+            n_pcs = input.knn_pcs()
             to_dense = FunctionTransformer(lambda x: x.toarray(), accept_sparse=True)
             pipe = Pipeline([
                 ("preprocess", preprocessor),
                 ("to_dense", to_dense),
-                ("pca", PCA(n_components=20, random_state=42)),
+                ("pca", PCA(n_components=n_pcs, random_state=42)),
                 ("knn", KNeighborsRegressor(n_neighbors=n_neighbors, weights=weights))
             ])
         pipe.fit(X_train, y_train)
@@ -283,12 +289,50 @@ def server(input, output, session):
         return {
             "y_true": y_test_arr,
             "y_pred": y_pred_arr,
+            "X_test": X_test,
             "residuals": residuals,
             "n_neighbors": n_neighbors,
             "weights": weights,
             "RMSE": round(rmse,3),
             "R^2": round(r2,3)
         }
+    
+    # Number of PCs slider
+    @output
+    @render.ui
+    def pca_slider_ui():
+        if input.knn_model() == "KNN with PCA":
+            return ui.input_slider("knn_pcs",
+                               "Number of Principal Components:",
+                               min=1,
+                               max=20,
+                               value=15)
+        else:
+            return None
+    
+    # KNN 2d Visualization
+    @output
+    @render.plot
+    def knn_2d_plot():
+        res = knn_eval() 
+        X = df_knn.drop(columns=['Altitude']).dropna()
+        X_test = res['X_test']
+        numeric_features = X_test.select_dtypes(include=[np.number]).columns.tolist()
+        X_num = StandardScaler().fit_transform(X_test[numeric_features])
+        pca = PCA(n_components=2, random_state=42)
+        X_2d = pca.fit_transform(X_num)
+        y_pred = res["y_pred"]
+    
+        plt.figure(figsize=(8,6))
+        plt.scatter(X_2d[:,0], X_2d[:,1], c=y_pred, alpha=0.7)
+        plt.colorbar(label="Predicted Altitude")
+        plt.xlabel("PC1")
+        plt.ylabel("PC2")
+        plt.title("KNN Predictions in 2D PCA Space")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
 
     # Render table
     @output
