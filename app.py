@@ -4,16 +4,25 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, FunctionTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.decomposition import PCA
+from matplotlib.patches import Patch
 from scipy import stats
+from matplotlib.colors import LinearSegmentedColormap
+import plotly.express as px
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+from sklearn.linear_model import LinearRegression
+from statsmodels.graphics.regressionplots import plot_partregress_grid
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import plotly.graph_objects as go
+from sklearn.linear_model import Lasso, Ridge
 
 # Dataset
 df = pd.read_csv("cleaned_data/FINAL_DATA.csv")
@@ -34,6 +43,13 @@ df_kmeans[num_cols] = scaler.fit_transform(df_kmeans[num_cols])
 df_knn = df.copy()
 df_knn['Altitude'] = pd.to_numeric(df_knn['Altitude'], errors='coerce')
 df_knn = df_knn.dropna(subset=['Altitude'])
+
+# Further cleaning for Linear
+df_lin = pd.read_csv('cleaned_data/linear.csv')
+country_counts = df_lin['country'].value_counts()
+threshold = 8
+valid_countries = country_counts[country_counts >= threshold].index
+df_lin = df_lin[df_lin['country'].isin(valid_countries)]
 
 
 # ------------------------------------------------------------
@@ -59,6 +75,50 @@ app_ui = ui.page_fluid(
         ui.h3("Data Preview"),
         ui.output_table("df_table")
     ),
+
+    # ---- EDA Tab ----
+    ui.nav_panel(
+        "EDA",
+        ui.h3("Exploratory Data Analysis"),
+        ui.h5("Correlation Heatmap"),
+        ui.output_plot("corr_heatmap"),
+        ui.hr(),
+        ui.h5("Variance Inflation Factor (VIF) Plot"),
+        ui.layout_sidebar(
+            ui.sidebar(
+                ui.input_checkbox_group(
+                    "vif_vars",
+                    "Variables to include:",
+                    choices=["aroma", "flavor", "aftertaste", "acidity", "body", "balance"],
+                    selected=["aroma", "flavor", "aftertaste", "acidity", "body", "balance"]
+                ),
+                ui.input_checkbox_group(
+                    "vif_lines",
+                    "Show threshold lines:",
+                    choices={"5": "VIF = 5", "10": "VIF = 10"},
+                    selected=["5", "10"]
+                ),
+            ),
+            ui.output_plot("vif_plot")
+        ),
+        ui.hr(),
+        ui.h5("Distribution of Total Quality"),
+        ui.output_plot("quality_hist"),
+        ui.hr(),
+        ui.h5("Total Quality Distribution by Country"),
+        ui.layout_sidebar(
+            ui.sidebar(
+                ui.input_radio_buttons(
+                    "country_color_mode",
+                    "Color countries by the mode of:",
+                    choices=["Processing Method", "Harvest Year"],
+                    selected="Processing Method"
+                )
+            ),
+            ui.output_plot("country_quality_plot", height="400px")
+        ),
+    ),
+
 
     # ---- K-Means Clustering Tab ----
     ui.nav_panel(
@@ -157,6 +217,124 @@ app_ui = ui.page_fluid(
 # Server
 # ------------------------------------------------------------
 def server(input, output, session):
+
+    # ----- EDA -----
+    # Correlation heatmap 
+    @output
+    @render.plot
+    def corr_heatmap():
+        corr = df_lin.loc[:, "aroma":"balance"].corr()
+
+        custom_cmap = LinearSegmentedColormap.from_list(
+            "coffee_red", ["#6F4E37", "#C04040"], N=256
+        )
+
+        plt.figure(figsize=(8, 5))
+        sns.heatmap(corr, annot=True, cmap=custom_cmap)
+        plt.title("Correlation Matrix of Scale-Scored Variables")
+        plt.tight_layout()
+        return plt.gcf()
+    
+    # VIF
+    @output
+    @render.plot
+    def vif_plot():
+        vars_selected = input.vif_vars()
+        lines = input.vif_lines()
+        X = df_lin[list(vars_selected)].dropna()
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        vif_vals = [variance_inflation_factor(X_scaled, i) for i in range(len(vars_selected))]
+        vif_df = pd.DataFrame({"variable": vars_selected, "VIF": vif_vals})
+        vif_df = vif_df.sort_values("VIF", ascending=False)
+        plt.figure(figsize=(8, 6))
+        plt.barh(vif_df["variable"], vif_df["VIF"], color="#6F4E37")
+        if "5" in lines:
+            plt.axvline(5, color="#D4A017", linestyle="--")
+        if "10" in lines:
+            plt.axvline(10, color="#C04040", linestyle="--")
+        plt.xlabel("VIF")
+        plt.ylabel("Variable")
+        plt.title("Variance Inflation Factors")
+        plt.tight_layout()
+        return plt.gcf()
+    
+    # Histogram
+    @output
+    @render.plot
+    def quality_hist():
+        plt.figure(figsize=(7, 5))
+        sns.histplot(
+            df_lin["total_quality"].dropna(),
+            bins=10,
+            kde=True,
+            color="#6F4E37"
+        )
+        plt.title("Distribution of Overall Quality")
+        plt.xlabel("Overall Quality")
+        plt.ylabel("Frequency")
+        plt.tight_layout()
+        return plt.gcf()
+    
+    # Box plots
+    @output
+    @render.plot
+    def country_quality_plot():
+        df = df_lin.copy()
+        choice = input.country_color_mode()
+        palette = {
+            'Washed/Wet': '#6F4E37',
+            'Natural/Dry': '#C04040',
+            'Honey': '#D4A017',
+            'Fermentation': "#D46217",
+            'Cherry': "#460606",
+            '2020': "#460606",
+            '2021': "#D46217",
+            '2023': "#D4A017",
+            '2024': "#C04040",
+            '2025': "#6F4E37"
+        }
+        if choice == "Processing Method":
+            mode_var = df.groupby("country")["processing_method"].agg(lambda x: x.mode().iloc[0])
+            df["mode_var"] = df["country"].map(mode_var)
+            legend_title = "Processing Method"
+            plot_title = "Total Quality by Country (Most Used Processing Method)"
+        else:
+            df = df.dropna(subset=["harvest_year"])
+            df = df[df["harvest_year"] != 2026]
+            df["harvest_year"] = df["harvest_year"].astype(str)
+            mode_var = df.groupby("country")["harvest_year"].agg(lambda x: x.mode().iloc[0])
+            df["mode_var"] = df["country"].map(mode_var)
+            legend_title = "Harvest Year"
+            plot_title = "Total Quality by Country (Most Popular Harvest Year)"
+        plt.figure(figsize=(9, 6))
+        sns.boxplot(
+            y="country",
+            x="total_quality",
+            hue="mode_var",
+            data=df,
+            palette=palette,
+            dodge=False
+        )
+        plt.title(plot_title)
+        plt.xlabel("Total Quality")
+        plt.ylabel("Country")
+        legend_elements = [
+            Patch(facecolor=palette[val], label=val)
+            for val in sorted(df["mode_var"].unique())
+            if val in palette
+        ]
+        plt.legend(
+            handles=legend_elements,
+            title=legend_title,
+            loc='center left',
+            bbox_to_anchor=(1, 0.5)
+        )
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close()
+        return fig
+
     
     # K-means clustering reactive data
     @reactive.Calc
