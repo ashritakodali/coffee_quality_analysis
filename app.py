@@ -20,6 +20,7 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from sklearn.linear_model import LinearRegression
 from statsmodels.graphics.regressionplots import plot_partregress_grid
+from statsmodels.graphics.regressionplots import plot_partregress
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
 from sklearn.linear_model import Lasso, Ridge
@@ -154,7 +155,27 @@ app_ui = ui.page_fluid(
     ui.nav_panel(
         "Linear Reg",
         ui.h3("Linear Regression"),
-        ui.p("placeholder")
+        ui.layout_sidebar(
+            ui.sidebar(
+                ui.input_checkbox_group(
+                    id="predictors",
+                    label="Select predictors for model:",
+                    choices=["country", "species", "sweetness"],
+                    selected=["country", "species", "sweetness"]
+                )
+            ),
+            ui.h5("Model Formula"),
+            ui.output_text_verbatim("lin_model_formula"),
+            ui.div(
+               ui.h5("Model Summary"),
+                ui.output_table("lin_model_summary"), 
+            ),
+            ui.h5("Model Diagnostic Plots"),
+            ui.output_plot("lin_actual_pred_plot", height="400px"),
+            ui.output_plot("lin_resid_pred_plot", height="400px"),
+            ui.output_plot("lin_hist_residuals", height="400px"),
+            ui.output_plot("lin_qq_residuals", height="400px")
+        )
     ),
 
     # ---- Logistic Regression -----
@@ -421,6 +442,133 @@ def server(input, output, session):
     def importance_table():
         _, _, importance = kmeans_result()
         return importance
+    
+    # ----- Linear Reg reactive data -----
+    @reactive.calc
+    def run_model():
+        preds = input.predictors()
+        if len(preds) == 0:
+            return None
+        formula = "total_quality ~ " + " + ".join(preds)
+        model = smf.ols(formula=formula, data=df_lin).fit()
+        return model
+
+    # Formula
+    @output
+    @render.text
+    def lin_model_formula():
+        result = run_model()
+        preds = input.predictors()
+        if result is None or len(preds) == 0:
+            return "Please select predictors."
+        coefs = result.params  # OLS coefficients
+        terms = []
+        for name, coef in coefs.items():
+            coef_str = f"{coef:.3f}"
+            if name == "Intercept":
+                terms.insert(0, f"{coef_str}")
+            else:
+                sign = "+" if coef >= 0 else "-"
+                terms.append(f" {sign} {abs(coef):.3f} * {name}")
+        formula_str = "y = " + " \\\n     ".join(terms)
+        return formula_str
+
+    
+    # Linear model summary
+    @output
+    @render.table
+    def lin_model_summary():
+        result = run_model()
+        preds = input.predictors()
+        if result is None or len(preds) == 0:
+            return pd.DataFrame({"Metric": ["Info"], "Value": ["Please select predictors."]})
+        summary_df = pd.DataFrame({
+            "Metric": ["Model Type", "Number of Predictors", "R²", "Adjusted R²", "RMSE"],
+            "Value": ["OLS", len(preds), round(result.rsquared, 3), round(result.rsquared_adj, 3),
+                    round(np.sqrt(mean_squared_error(df_lin["total_quality"], result.fittedvalues)), 3)]
+        })
+        return summary_df
+
+
+
+    # Actual vs Predicted
+    @output
+    @render.plot
+    def lin_actual_pred_plot():
+        result = run_model()
+        if result is None:
+            return plt.figure()
+        actual = df_lin["total_quality"]
+        predicted = result.fittedvalues
+        plt.figure(figsize=(7,5))
+        plt.scatter(actual, predicted, alpha=0.6, color="#6F4E37")
+        min_val = min(actual.min(), predicted.min())
+        max_val = max(actual.max(), predicted.max())
+        plt.plot([min_val, max_val], [min_val, max_val], linestyle="--", color='red')
+        plt.xlabel("Actual Total Quality")
+        plt.ylabel("Predicted Total Quality")
+        plt.title("Actual vs Predicted")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
+
+    # Residuals vs Predicted
+    @output
+    @render.plot
+    def lin_resid_pred_plot():
+        result = run_model()
+        if result is None:
+            return plt.figure()
+        residuals = result.resid
+        predicted = result.fittedvalues
+        plt.figure(figsize=(7,5))
+        plt.scatter(predicted, residuals, alpha=0.6, color="#6F4E37")
+        plt.axhline(0, linestyle="--", color='red')
+        plt.xlabel("Predicted Total Quality")
+        plt.ylabel("Residuals (Actual - Predicted)")
+        plt.title("Residuals vs Predicted")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
+
+    # Histogram of Residuals
+    @output
+    @render.plot
+    def lin_hist_residuals():
+        result = run_model()
+        if result is None:
+            return plt.figure()
+        residuals = result.resid
+        plt.figure(figsize=(7,5))
+        plt.hist(residuals, bins=30, edgecolor="black", color="#6F4E37")
+        plt.xlabel("Residual")
+        plt.ylabel("Frequency")
+        plt.title("Histogram of Residuals")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
+
+    # Q-Q Plot of Residuals
+    @output
+    @render.plot
+    def lin_qq_residuals():
+        result = run_model()
+        if result is None:
+            return plt.figure()
+        residuals = result.resid
+        plt.figure(figsize=(7,5))
+        (osm, osr), (slope, intercept, r) = stats.probplot(residuals, dist="norm")
+        plt.scatter(osm, osr, color="#6F4E37", alpha=0.6)
+        x = np.linspace(min(osm), max(osm), 100)
+        plt.plot(x, slope*x + intercept, linestyle="--", color="red")
+        plt.title("Q-Q Plot of Residuals")
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close(fig)
+        return fig
     
     # ----- KNN Evaluation Table -----
     @reactive.Calc
