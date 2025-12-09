@@ -1,5 +1,4 @@
 from shiny import App, render, ui, reactive
-
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -25,22 +24,6 @@ from statsmodels.graphics.regressionplots import plot_partregress
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
 from sklearn.linear_model import Lasso, Ridge
-import random
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import accuracy_score
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers, models, callbacks
-from sklearn.utils.class_weight import compute_class_weight
-from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    roc_auc_score,
-    roc_curve,
-    precision_recall_curve,
-    average_precision_score,
-)
 
 # Dataset
 df = pd.read_csv("cleaned_data/FINAL_DATA.csv")
@@ -69,14 +52,6 @@ threshold = 8
 valid_countries = country_counts[country_counts >= threshold].index
 df_lin = df_lin[df_lin['country'].isin(valid_countries)]
 
-# cleaning for MLP
-df_mlp = df.copy()
-df_mlp['total_score'] = df_mlp['Aroma'] + df_mlp['Flavor'] + df_mlp['Aftertaste'] + df_mlp['Acidity'] + df_mlp['Body'] + df_mlp['Balance'] + df_mlp['Uniformity'] + df_mlp['Clean.Cup'] + df_mlp['Sweetness']
-df_mlp['market_grade'] = pd.cut(df_mlp['total_score'], bins = [0, 75, 78, 90],
-                            labels = ['Normal', 'Premium', 'Specialty'])
-
-# further cleaning for Logistic
-df_log = df.copy()
 
 # ------------------------------------------------------------
 # UI
@@ -92,17 +67,7 @@ app_ui = ui.page_fluid(
         "Overview",
         ui.h2("Coffee Bean Quality Machine Learning Analysis"),
         ui.p("DS 6021 Final Project"),
-        ui.p("Marissa Burton, Hayeon Chung, Maggie Crowner, Asmita Kadam, Ashrita Kodali"),
-        ui.p("This project explores coffee bean characteristics and quality measures to evaluate the following research questions:"),
-        ui.tags.ul(
-            ui.tags.li("What distinct profiles of arabica/robusta coffee beans can we identify using K-Means Clustering?"),
-            ui.tags.li("Can we predict total coffee quality scores based on certain characteristics using Linear Regression?"),
-            ui.tags.li("How well can we classify coffee beans as arabica or robusta based on their characteristics?"),
-            ui.tags.li("How well can we predict the altitude of the coffee bean farms using K-Nearest Neighbors Regression?"),
-            ui.tags.li("Are we able to effectively use Multilayer Perceptrons to predict the market grade of coffee beans based on farming and physical attributes?")
-        ),
-        ui.p("This data was collected from the Coffee Quality Institute, and current data was scraped using code from https://github.com/jldbc/coffee-quality-database/tree/master. The following Shiny app tabs allow users to explore the dataset itself, some interesting findings we discovered, and models that can provide answers to our research questions.")
-
+        ui.p("Marissa Burton, Hayeon Chung, Maggie Crowner, Asmita Kadam, Ashrita Kodali")
     ),
 
     # ---- Dataset Tab ----
@@ -153,9 +118,6 @@ app_ui = ui.page_fluid(
             ),
             ui.output_plot("country_quality_plot", height="400px")
         ),
-        ui.hr(),
-        ui.h5("Sweetness Distribution by Species"),
-        ui.output_plot("sweetness_hist", height="400px")
     ),
 
 
@@ -186,17 +148,13 @@ app_ui = ui.page_fluid(
             ui.h5("Variable Importance in Clustering"),
             ui.output_table("importance_table")
 
-        ),
-        ui.p("Taste: aggregate of Flavor, Aftertaste, Acidity, Body, Balance"),
-        ui.p("Quality Control: aggregate of Uniformity, Clean.Cup"),
-        ui.p("Age: 2025 - Harvest.Year"),
-        ui.p("Total Defects: Category.One.Defects + Category.Two.Defects")
+        )
     ),
 
     # ---- Linear Regression -----
     ui.nav_panel(
         "Linear Reg",
-        ui.h3("Can we predict total coffee quality scores based on certain characteristics using Linear Regression?"),
+        ui.h3("Linear Regression"),
         ui.layout_sidebar(
             ui.sidebar(
                 ui.input_checkbox_group(
@@ -224,48 +182,7 @@ app_ui = ui.page_fluid(
     ui.nav_panel(
         "Logistic Reg",
         ui.h3("How well can we classify coffee beans as arabica or robusta based on their characteristics?"),
-        ui.layout_sidebar(
-            ui.sidebar(
-                ui.input_selectize(
-                    id="log_pred",
-                    label="Select predictors:",
-                    choices=[
-                        'Country.of.Origin', 'Number.of.Bags', 'Bag.Weight', 'Harvest.Year', 
-                        'Grading.Date', 'Processing.Method', 'Aroma', 'Flavor', 'Aftertaste', 
-                        'Acidity', 'Body', 'Balance', 'Uniformity', 'Clean.Cup', 'Sweetness', 
-                        'Moisture', 'Category.One.Defects', 'Quakers', 'Color', 
-                        'Category.Two.Defects', 'Expiration', 'Altitude'
-                    ],
-                    selected=[
-                        'Aroma', 'Flavor', 'Aftertaste', 'Acidity', 'Body', 'Balance', 
-                        'Uniformity', 'Clean.Cup', 'Moisture', 'Sweetness'
-                    ],
-                    multiple=True,
-                ),
-
-                ui.input_select(
-                    id="log_penalty",
-                    label="Penalty Type:",
-                    choices=["l2", "l1", None],
-                    selected='l2'
-                )
-            ),
-
-            ui.div(
-                ui.h5("Model Formula"),
-                ui.output_text_verbatim("log_formula"),
-                ui.h5("Model Metrics"),
-                ui.output_table("log_summary"),
-                ui.h5("Confusion Matrix"),
-                ui.output_plot("log_confusion"),
-                ui.h5("ROC Curve"),
-                ui.output_plot("log_roc"),
-                ui.h5("Precision-Recall Curve"),
-                ui.output_plot("log_pr"),
-                ui.h5("Top Coefficients"),
-                ui.output_plot("log_coef_plot")
-            )
-        )
+        ui.p("placeholder")
     ),
 
     # ---- KNN -----
@@ -289,10 +206,12 @@ app_ui = ui.page_fluid(
                 ),
                 ui.output_ui("pca_slider_ui")
             ),
+
             ui.div(
                 ui.h5("Model Evaluation"),
                 ui.output_table("eval_table")
             ),
+
             ui.h5("KNN Plot"),
             ui.output_plot("knn_2d_plot", height="400px"),
 
@@ -308,43 +227,9 @@ app_ui = ui.page_fluid(
     # ---- MLP -----
     ui.nav_panel(
         "MLP",
-        ui.h3("Are we able to effectively use Multilayer Perceptrons to predict the market grade of coffee beans based on farming and physical attributes?"),
-        ui.layout_sidebar(
-            ui.sidebar(
-                ui.input_radio_buttons(
-                    "mlp_model",
-                    "Model Type:",
-                     choices=["Simple MLP", "Complex MLP"],
-                    selected="Simple MLP"
-                ),
-                ui.input_slider("learning_rates",
-                    "Learning Rate:",
-                    min=0.0001,
-                    max=0.01,
-                    step=0.0001,
-                    value=0.0005
-                ),
-                ui.input_select(
-                    "batch_sizes",
-                    "Batch Size:",
-                    choices=[16, 32, 64, 128, 256],
-                    selected=32
-                ),
-                ui.input_action_button("train_mlp", "Train MLP")
-            ),
-
-            ui.div(
-                ui.h5("Model Evaluation"),
-                ui.output_table("mlp_eval_table")
-                ),
-
-            ui.h5('MLP Plots'),
-            ui.output_plot('loss_plot', height='400px'),
-            ui.output_plot('mlp_confusion_matrix', height='400px'),
-        )
+        ui.h3("MLP"),
+        ui.p("placeholder")
     ),
-
-
 
     title="Coffee Quality Analysis"
 ))
@@ -470,26 +355,6 @@ def server(input, output, session):
         fig = plt.gcf()
         plt.close()
         return fig
-    
-    # Sweetness EDA
-    @output
-    @render.plot
-    def sweetness_hist():
-        # y_bin: 1 = Arabica, 0 = Robusta
-        y_str = df_log["Species"].astype(str).str.strip().str.lower()
-        y_bin = y_str.map({"arabica": 1, "robusta": 0})
-        plt.figure(figsize=(7,5))
-        plt.hist(df_log.loc[y_bin == 1, "Sweetness"].dropna(), bins=30, label="Arabica", color="#6F4E37")
-        plt.hist(df_log.loc[y_bin == 0, "Sweetness"].dropna(), bins=30, label="Robusta", color="#C04040")
-        plt.title("Sweetness by Species")
-        plt.xlabel("Sweetness")
-        plt.ylabel("Frequency")
-        plt.legend()
-        plt.tight_layout()
-        fig = plt.gcf()
-        plt.close(fig)
-        return fig
-
 
     
     # K-means clustering reactive data
@@ -705,228 +570,6 @@ def server(input, output, session):
         plt.close(fig)
         return fig
     
-    # ---- Logistic Regression ----
-    @reactive.Calc
-    def log_model_fit():
-        preds = list(input.log_pred())
-        penalty = input.log_penalty()
-        if len(preds) == 0:
-            return None
-        y_str = df_log["Species"].astype(str).str.strip().str.lower()
-        y_bin = y_str.map({"arabica": 1, "robusta": 0})
-        X = df_log[preds].copy()
-        y = y_bin.copy()  # 1 = Arabica, 0 = Robusta
-        valid_rows = y.notna()
-        X = X.loc[valid_rows].reset_index(drop=True)
-        y = y.loc[valid_rows].astype(int).reset_index(drop=True)
-
-        numeric_cols_model = X.select_dtypes(include=[np.number]).columns.tolist()
-        categorical_cols_model = X.select_dtypes(include=["object"]).columns.tolist()
-
-        numeric_pipe = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-        ])
-        categorical_pipe = Pipeline([
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
-        ])
-        preprocess = ColumnTransformer([
-            ("num", numeric_pipe, numeric_cols_model),
-            ("cat", categorical_pipe, categorical_cols_model),
-        ])
-
-        # Update Logistic Regression with selected penalty
-        if penalty == "none":
-            solver = "lbfgs"  # lbfgs ignores penalty if penalty='none'
-            log_reg = LogisticRegression(
-                penalty="none",
-                class_weight="balanced",
-                max_iter=1000,
-                solver=solver
-            )
-        elif penalty == "l1":
-            log_reg = LogisticRegression(
-                penalty="l1",
-                class_weight="balanced",
-                max_iter=1000,
-                solver="saga"
-            )
-        else:  # l2
-            log_reg = LogisticRegression(
-                penalty="l2",
-                class_weight="balanced",
-                max_iter=1000,
-                solver="lbfgs"
-            )
-
-        clf = Pipeline([
-            ("prep", preprocess),
-            ("model", log_reg)
-        ])
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.25, random_state=42, stratify=y
-        )
-
-        clf.fit(X_train, y_train)
-        
-        return {
-            "clf": clf,
-            "X_train": X_train, "X_test": X_test,
-            "y_train": y_train, "y_test": y_test
-        }
-
-
-    # ---------------- Formula ----------------
-    @output
-    @render.text
-    def log_formula():
-        fit = log_model_fit()
-        preds = input.log_pred()
-        if fit is None or len(preds) == 0:
-            return "Please select predictors."
-
-        clf = fit["clf"]
-        coefs = clf.named_steps["model"].coef_[0]
-        feature_names = clf.named_steps["prep"].get_feature_names_out()
-        terms = []
-        for name, coef in zip(feature_names, coefs):
-            sign = "+" if coef >= 0 else "-"
-            coef_str = f"{abs(coef):.3f}"
-            terms.append(f"{sign} {coef_str}*{name}")
-        formula = "logit(p) = " + " \\\n     ".join(terms)
-        return formula
-
-
-    # ---------------- Metrics Table ----------------
-    @output
-    @render.table
-    def log_summary():
-        fit = log_model_fit()
-        if fit is None:
-            return pd.DataFrame({"Metric": ["Info"], "Value": ["Please select predictors."]})
-
-        clf = fit["clf"]
-        X_test, y_test = fit["X_test"], fit["y_test"]
-        y_pred = clf.predict(X_test)
-        y_prob = clf.predict_proba(X_test)[:,1]
-
-        report = classification_report(y_test, y_pred, output_dict=True, digits=3)
-        auc = roc_auc_score(y_test, y_prob)
-        ap = average_precision_score(y_test, y_prob)
-
-        summary_df = pd.DataFrame({
-            "Metric": ["Accuracy", "ROC-AUC", "PR-AUC", "Precision (1)", "Recall (1)", "F1 (1)"],
-            "Value": [
-                round(report["accuracy"], 3),
-                round(auc, 3),
-                round(ap, 3),
-                round(report["1"]["precision"], 3),
-                round(report["1"]["recall"], 3),
-                round(report["1"]["f1-score"], 3)
-            ]
-        })
-        return summary_df
-
-
-    # ---------------- Confusion Matrix ----------------
-    @output
-    @render.plot
-    def log_confusion():
-        fit = log_model_fit()
-        if fit is None:
-            return plt.figure()
-        clf = fit["clf"]
-        X_test, y_test = fit["X_test"], fit["y_test"]
-        y_pred = clf.predict(X_test)
-        cm = confusion_matrix(y_test, y_pred)
-
-        plt.figure(figsize=(5,4))
-        plt.imshow(cm, cmap="Blues")
-        plt.title("Confusion Matrix")
-        plt.xticks([0,1], ["Pred Robusta", "Pred Arabica"])
-        plt.yticks([0,1], ["True Robusta", "True Arabica"])
-        for i in range(cm.shape[0]):
-            for j in range(cm.shape[1]):
-                plt.text(j, i, cm[i,j], ha="center", va="center", color="red", fontsize=12)
-        plt.tight_layout()
-        fig = plt.gcf()
-        plt.close(fig)
-        return fig
-
-
-    # ---------------- ROC Curve ----------------
-    @output
-    @render.plot
-    def log_roc():
-        fit = log_model_fit()
-        if fit is None:
-            return plt.figure()
-        clf = fit["clf"]
-        X_test, y_test = fit["X_test"], fit["y_test"]
-        y_prob = clf.predict_proba(X_test)[:,1]
-        fpr, tpr, _ = roc_curve(y_test, y_prob)
-        
-        plt.figure()
-        plt.plot(fpr, tpr, color="#6F4E37")
-        plt.plot([0,1],[0,1], "--", color="gray")
-        plt.xlabel("False Positive Rate")
-        plt.ylabel("True Positive Rate")
-        plt.title("ROC Curve")
-        plt.tight_layout()
-        fig = plt.gcf()
-        plt.close(fig)
-        return fig
-
-
-    # ---------------- Precision-Recall Curve ----------------
-    @output
-    @render.plot
-    def log_pr():
-        fit = log_model_fit()
-        if fit is None:
-            return plt.figure()
-        clf = fit["clf"]
-        X_test, y_test = fit["X_test"], fit["y_test"]
-        y_prob = clf.predict_proba(X_test)[:,1]
-        prec, rec, _ = precision_recall_curve(y_test, y_prob)
-        
-        plt.figure()
-        plt.plot(rec, prec, color="#6F4E37")
-        plt.xlabel("Recall")
-        plt.ylabel("Precision")
-        plt.title("Precision-Recall Curve")
-        plt.tight_layout()
-        fig = plt.gcf()
-        plt.close(fig)
-        return fig
-
-
-    # ---------------- Top Coefficients ----------------
-    @output
-    @render.plot
-    def log_coef_plot():
-        fit = log_model_fit()
-        if fit is None:
-            return plt.figure()
-        clf = fit["clf"]
-        feature_names = clf.named_steps["prep"].get_feature_names_out()
-        coefs = clf.named_steps["model"].coef_[0]
-        coef_df = pd.DataFrame({"feature": feature_names, "coef": coefs})
-        coef_df["abs_coef"] = coef_df["coef"].abs()
-        coef_df = coef_df.sort_values("abs_coef", ascending=False).head(15)
-        coef_df = coef_df.sort_values("coef")  # for horizontal bar plot
-
-        plt.figure(figsize=(8,6))
-        plt.barh(coef_df["feature"], coef_df["coef"], color="#6F4E37")
-        plt.xlabel("Coefficient (standardized log-odds)")
-        plt.title("Top 15 Features — Logistic Regression")
-        plt.tight_layout()
-        fig = plt.gcf()
-        plt.close(fig)
-        return fig
-    
     # ----- KNN Evaluation Table -----
     @reactive.Calc
     def knn_eval():
@@ -1097,203 +740,6 @@ def server(input, output, session):
         fig = plt.gcf()
         plt.close(fig)
         return fig
-
-    # MLP model
-    @reactive.Calc
-    def mlp_eval():
-        # Tell Shiny that this reactive depends on input values
-        input.train_mlp()
-        
-        model_type = input.mlp_model()
-        lr = input.learning_rates()
-        batch = int(input.batch_sizes())
-
-        if df_mlp is None or df_mlp.empty:
-            return None
-        # Preprocessing
-        X = df_mlp[['Country.of.Origin', 'Number.of.Bags', 'Bag.Weight', 'Harvest.Year',
-                'Processing.Method', 'Moisture', 'Category.One.Defects', 'Quakers',
-                'Color', 'Category.Two.Defects', 'Species', 'Altitude']]
-        y = df_mlp['market_grade']
-
-        # Train/test split
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, stratify=y, shuffle=True, random_state=6021
-        )
-
-        # Numeric/categorical handling
-        numeric_columns = X.select_dtypes(include=['int64', 'float64']).columns
-        categorical_columns = X.select_dtypes(include=['object']).columns
-
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ("num", StandardScaler(), numeric_columns),
-                ("cat", OneHotEncoder(drop="first", handle_unknown="ignore"), categorical_columns)
-            ]
-        )
-        preprocessor.fit(X_train)
-        X_train_processed = preprocessor.transform(X_train)
-        X_test_processed = preprocessor.transform(X_test)
-
-        labeler = LabelEncoder()
-        y_train_encoded = labeler.fit_transform(y_train)
-        y_test_encoded = labeler.transform(y_test)
-
-        # Build model
-        num_classes = len(np.unique(y_train))
-        tf.random.set_seed(6021)
-        np.random.seed(6021)
-        random.seed(6021)
-
-        if model_type == "Simple MLP":
-            model = keras.Sequential([
-                keras.layers.Dense(16, activation='relu', kernel_regularizer=keras.regularizers.l2(0.001)),
-                keras.layers.Dropout(0.3),
-                keras.layers.Dense(num_classes, activation='softmax')
-            ])
-        else:  # Complex MLP
-            model = keras.Sequential([
-                keras.layers.Dense(256, activation='relu'),
-                keras.layers.BatchNormalization(),
-                keras.layers.Dropout(0.3),
-                keras.layers.Dense(128, activation='relu'),
-                keras.layers.BatchNormalization(),
-                keras.layers.Dropout(0.3),
-                keras.layers.Dense(64, activation='relu'),
-                keras.layers.Dropout(0.2),
-                keras.layers.Dense(num_classes, activation='softmax')
-            ])
-
-        model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy']
-        )
-
-        early_stop = keras.callbacks.EarlyStopping(
-            patience=20,
-            restore_best_weights=True,
-            monitor='val_loss'
-        )
-
-        # Class weights
-        cw = compute_class_weight("balanced", classes=np.unique(y_train_encoded), y=y_train_encoded)
-        class_weight = dict(enumerate(cw))
-
-        history = model.fit(
-            X_train_processed, y_train_encoded,
-            validation_split=0.2,
-            epochs=100,
-            batch_size=batch,
-            callbacks=[early_stop],
-            verbose=0,
-            class_weight=class_weight
-        )
-
-        y_pred_probs = model.predict(X_test_processed)
-        y_pred_classes = np.argmax(y_pred_probs, axis=1)
-
-        return {
-            "model": model,
-            "history": history,
-            "X_test": X_test_processed,
-            "y_test": y_test_encoded,
-            "y_pred_classes": y_pred_classes,
-            "labeler": labeler
-        }
-
-
-    @output
-    @render.plot
-    def loss_plot():
-        eval_res = mlp_eval()
-        if eval_res is None:
-            fig, ax = plt.subplots(figsize=(8, 5))
-            ax.text(0.5, 0.5, 'Click "Train MLP" to generate plot', 
-                    ha='center', va='center', fontsize=14)
-            ax.axis('off')
-            return fig
-        history = eval_res["history"]
-
-        train_loss = history.history['loss']
-        val_loss = history.history['val_loss']
-
-        plt.figure(figsize=(8, 5))
-        plt.plot(train_loss, label='Training Loss', color='#4B2E2B')
-        plt.plot(val_loss, label='Validation Loss', color='#C8A27A')
-        plt.xlabel('Epochs')
-        plt.ylabel('Loss')
-        plt.title('Training & Validation Loss Curve')
-        plt.legend()
-        plt.grid(True)
-        fig = plt.gcf()
-        plt.close(fig)
-        return fig
-
-    @output
-    @render.plot
-    def mlp_confusion_matrix():
-        eval_res = mlp_eval()
-        if eval_res is None:
-            return None
-
-        model = eval_res["model"]
-        X_test = eval_res["X_test"]
-        y_test = eval_res["y_test"]
-        y_pred_classes = eval_res["y_pred_classes"]
-        labeler = eval_res["labeler"]
-
-        y_pred_labels = labeler.inverse_transform(y_pred_classes)
-        y_true_labels = labeler.inverse_transform(y_test)
-
-        brown_cmap = LinearSegmentedColormap.from_list(
-            "brown_gradient",
-            ["#f3e9dd", "#c19a6b", "#8b5a2b", "#5c3317", "#2a1c12"]
-        )
-
-        cm = confusion_matrix(y_true_labels, y_pred_labels, labels=labeler.classes_)
-        plt.figure(figsize=(8,6))
-        sns.heatmap(cm, annot=True, fmt='d', cmap=brown_cmap,
-                    xticklabels=labeler.classes_, yticklabels=labeler.classes_)
-        plt.xlabel('Predicted')
-        plt.ylabel('True')
-        plt.title('Confusion Matrix')
-        fig = plt.gcf()
-        plt.close(fig)
-        return fig
-
-    @output
-    @render.table
-    def mlp_eval_table():
-        eval_res = mlp_eval()
-        y_test = eval_res["y_test"]
-        y_pred_classes = eval_res["y_pred_classes"]
-        labeler = eval_res["labeler"]
-        
-        # Encode labels to original names
-        y_pred_labels = labeler.inverse_transform(y_pred_classes)
-        y_true_labels = labeler.inverse_transform(y_test)
-
-        # Classification report as dict
-        report_dict = classification_report(
-            y_true_labels,
-            y_pred_labels,
-            target_names=labeler.classes_,
-            output_dict=True
-        )
-        report_df = pd.DataFrame(report_dict).T
-
-        # Add overall test accuracy
-        test_accuracy = accuracy_score(y_true_labels, y_pred_labels)
-        report_df.loc["Test Accuracy"] = {
-            "precision": "",
-            "recall": "",
-            "f1-score": "",
-            "support": test_accuracy
-        }
-
-        return report_df
-
 
 
 
