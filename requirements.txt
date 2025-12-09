@@ -1,0 +1,11 @@
+shiny
+pandas
+seaborn
+matplotlib
+numpy
+sklearn
+scipy
+plotly
+statsmodels
+random
+tensorflow
