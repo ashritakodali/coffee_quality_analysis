@@ -73,3 +73,16 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
  ├── requirements.txt
  ├── README.md   
 ```
+
+## 3. Instructions for Reproducing Results
+
+### Stage 1: Data Preparation
+- Create an account with the [Coffee Quality Institute](https://www.coffeeinstitute.org/).
+- Open up VSCode and import the necessary packages to webscrape the website. Use pip install to add any packages that are not already installed in the laptop.
+- Run `web_scraper.ipynb` in order to scrape the data from the website. If the webscraper breaks in the middle, rerun that chunk of code and change the page where it broke. 
+- Once finished, there should be two csv files (one for the Arabica beans and one for the robusta beans)
+- Run `clean_more.ipynb` in order to organize the delete and delete any unnecessary information and columns
+- Run `clean_coffee_data.R` in order to clean the text columns and perform the final required cleaning sets
+- In the end, there should be one csv file that contains the data for both the Arabica and Robusta coffee beans
+- The data cleaning scripts were adepted from this [Github Repository](https://github.com/jldbc/coffee-quality-database/tree/master). Changes were made to some of the files since some packages have deprecated since then.
+- The dataset used for this analysis containes records from October 2024 - Novemeber 2025. 
