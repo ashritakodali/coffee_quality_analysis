@@ -84,5 +84,5 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
 - Run `clean_more.ipynb` in order to organize the delete and delete any unnecessary information and columns
 - Run `clean_coffee_data.R` in order to clean the text columns and perform the final required cleaning sets
 - In the end, there should be one csv file that contains the data for both the Arabica and Robusta coffee beans
-- The data cleaning scripts were adepted from this [Github Repository](https://github.com/jldbc/coffee-quality-database/tree/master). Changes were made to some of the files since some packages have deprecated since then.
+- The data cleaning scripts were adapted from this [Github Repository](https://github.com/jldbc/coffee-quality-database/tree/master). Changes were made to some of the files since some packages have deprecated since then.
 - The dataset used for this analysis containes records from October 2024 - Novemeber 2025. 
