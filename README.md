@@ -108,4 +108,4 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
 - Upload the app to [ShinyApps.io](ShinyApps.io)  in order to deploy the dashboard
 - The final [dashboard](https://maggiecrowner.shinyapps.io/coffee_quality_app/) should look like this
 
-! images/coffee_animation.gif
+![trial](images/coffee_animation.gif)
