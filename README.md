@@ -76,8 +76,6 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
 
 ## 3. Instructions for Reproducing Results
 
-## 3. Instructions for Reproducing Results
-
 ### Stage 1: Data Preparation
 - Create an account with the [Coffee Quality Institute](https://www.coffeeinstitute.org/).
 - Download the files in the data folder of this repository
