@@ -76,13 +76,37 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
 
 ## 3. Instructions for Reproducing Results
 
+## 3. Instructions for Reproducing Results
+
 ### Stage 1: Data Preparation
 - Create an account with the [Coffee Quality Institute](https://www.coffeeinstitute.org/).
-- Open up VSCode and import the necessary packages to webscrape the website. Use pip install to add any packages that are not already installed in the laptop.
+- Download the files in the data folder of this repository
+- Open up VSCode and import the necessary packages to webscrape the website. Use pip install to add any packages that are not already installed
 - Run `web_scraper.ipynb` in order to scrape the data from the website. If the webscraper breaks in the middle, rerun that chunk of code and change the page where it broke. 
 - Once finished, there should be two csv files (one for the Arabica beans and one for the robusta beans)
 - Run `clean_more.ipynb` in order to organize the delete and delete any unnecessary information and columns
 - Run `clean_coffee_data.R` in order to clean the text columns and perform the final required cleaning sets
 - In the end, there should be one csv file that contains the data for both the Arabica and Robusta coffee beans
 - The data cleaning scripts were adapted from this [Github Repository](https://github.com/jldbc/coffee-quality-database/tree/master). Changes were made to some of the files since some packages have deprecated since then.
-- The dataset used for this analysis contains records from October 2024 - Novemeber 2025. 
+- The dataset used for this analysis contains records from October 2024 - November 2025.
+
+### Stage 2: Exploratory Data Analysis
+- Understand what the data looks like by doing an exploratory data analysis.
+- Download the files in the eda folder of this repository
+- Open up VSCode and import the necessary packages to webscrape the website. Use pip install to add any packages that are not already installed
+- Run files `ML_Project_KNN_EDA.ipynb`, `linear_regression_eda.ipynb`, and `mlp_eda.ipynb` in order to understand the various transformations and decisions that were made during the model building process
+
+### Stage 3: Model Building & Evaluation
+- Download the files in the modeling folder of this repository
+- Using the data set, 5 different models were created: Linear Regression Model, Logistic Regression Model, KNN Model, a K-Means Analysis, and a Multilayer Perceptron Model
+- Open up VSCode and import the necessary packages to build the models. Use pip install to add any packages that are not already installed
+- Run the following scripts in order to create these 5 models: `final_linear_regression.ipynb`, `logistic_reg.ipynb`,`ML_Project_KNN_modeling.ipynb`, `ML_Project_Clustering.ipynb`, and `mlp_model_FINAL.ipynb`
+- After running these scripts, you will be able to see to analyze the 5 different research questions and see how the models perform
+
+### Stage 4: Shiny App Development
+- In order to compile all of the results, a Shiny dashboard will be made
+- Download the file `app.py` that is found in the main branch of this repository
+- Run `app.py` in order to create the Shiny Dashboard
+- Upload the app to [ShinyApps.io](ShinyApps.io)  in order to deploy the dashboard
+- The final [dashboard](https://maggiecrowner.shinyapps.io/coffee_quality_app/) should look like this
+
