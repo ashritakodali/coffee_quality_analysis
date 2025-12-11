@@ -1,4 +1,4 @@
-# Coffee Quality Analysis (PUT MORE CREATIVE TITLE)
+# Coffee Quality Analysis: Bean There, Analyzed That!
 #### Marissa Burton, Hayeon Chung, Maggie Crowner, Asmita Kadam, Ashrita Kodali 
 
 ## Repository Contents
@@ -71,6 +71,7 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
  │  
  ├── app.py 
  ├── requirements.txt
+ ├── DS 6021 Final Project.pdf
  ├── README.md   
 ```
 
