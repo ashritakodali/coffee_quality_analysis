@@ -43,13 +43,14 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
 
 ```
 📂 Coffee Quality Analysis
- ├── 📂 data/  
- ├──── 📂 raw_in_progress_data/
+ ├── 📂 data/ 
+ ├──── 📂 raw_data/
+ │   │   ├── df_arabica_final.csv
+ │   │   ├── df_robusta_final.csv
+ ├──── 📂 in_progress_data/
  │   │   ├── arabica_data_cleaned.csv
  │   │   ├── clean_coffee_data.R
  │   │   ├── clean_more.ipynb
- │   │   ├── df_arabica_final.csv
- │   │   ├── df_robusta_final.csv
  │   │   ├── robusta_data_cleaned.csv
  │   │   ├── web_scraper.ipynb
  ├──── 📂 cleaned_data/
@@ -61,11 +62,13 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
  │   ├── linear_regression_eda.ipynb
  │   ├── mlp_eda.ipynb
  │  
+ ├── 📂 images/  
+ │   ├── coffee_animation.gif
+ │  
  ├── 📂 modeling/  
  │   ├── ML_Project_Clustering.ipynb
  │   ├── ML_Project_KNN_Modeling.ipynb
  │   ├── final_linear_regression.ipynb
- │   ├── linear_regression.ipynb
  │   ├── logistic_reg.ipynb
  │   ├── mlp_model_FINAL.ipynb
  │  
@@ -106,7 +109,7 @@ Developed and tested on Mac, but should work on Windows and Linux with appropria
 - In order to compile all of the results, a Shiny dashboard will be made
 - Download the file `app.py` that is found in the main branch of this repository
 - Run `app.py` in order to create the Shiny Dashboard
-- Upload the app to [ShinyApps.io](ShinyApps.io)  in order to deploy the dashboard
+- Upload the app to [ShinyApps.io](ShinyApps.io) in order to deploy the dashboard
 - The final [dashboard](https://maggiecrowner.shinyapps.io/coffee_quality_app/) should look like this
 
 ![trial](images/coffee_animation.gif)
