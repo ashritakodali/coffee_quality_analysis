@@ -43,7 +43,7 @@ from sklearn.metrics import (
 )
 
 # Dataset
-df = pd.read_csv("cleaned_data/FINAL_DATA.csv")
+df = pd.read_csv('../data/cleaned_data/FINAL_DATA.csv')
 
 # Further cleaning for K-Means
 df_kmeans = df.copy()
@@ -63,7 +63,7 @@ df_knn['Altitude'] = pd.to_numeric(df_knn['Altitude'], errors='coerce')
 df_knn = df_knn.dropna(subset=['Altitude'])
 
 # Further cleaning for Linear
-df_lin = pd.read_csv('cleaned_data/linear.csv')
+df_lin = pd.read_csv('../data/cleaned_data/linear.csv')
 country_counts = df_lin['country'].value_counts()
 threshold = 8
 valid_countries = country_counts[country_counts >= threshold].index
